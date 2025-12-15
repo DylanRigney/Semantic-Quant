@@ -57,7 +57,8 @@ async def main():
                 print("\n========================\n")
             elif hasattr(event, 'content') and event.content and event.content.parts:
                  # Optional: Print intermediate thoughts or tool calls if desired
-                 pass
+                 print(event.content.parts[0].text)
+                 
                  
     except Exception as e:
         print(f"Error during execution: {e}")

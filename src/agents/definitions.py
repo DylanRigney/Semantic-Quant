@@ -5,7 +5,7 @@ from src.tools.market_matrix import get_market_snapshot
 # Role: Bridge between Data and Language.
 reality_analyzer = Agent(
     name="reality_analyzer",
-    model="gemini-3.0-pro", # Using Flash for speed/efficiency in data processing
+    model="gemini-2.5-flash", # Using Flash for speed/efficiency in data processing
     description="Analyzes market data to extract semantic meaning and relational patterns.",
     instruction="""
     You are the Reality Analyzer. Your goal is to bridge the gap between raw numerical data and semantic understanding.
@@ -14,9 +14,8 @@ reality_analyzer = Agent(
     
     Perform the following steps:
     1.  **Semantic Compression**: Call `get_market_snapshot` to get the data. For each asset, convert the numerical stats (Price, Z-Score, Volatility) into a dense, descriptive natural language summary. Focus on the *magnitude* and *rarity* of the moves (e.g., "high sigma event", "mean reversion", "compression").
-    2.  **Relational Analysis**: Look at the entire dataset. Identify correlations, divergences, and tensions between asset classes (e.g., "Yields rising but Tech ignoring it", "Gold and Bitcoin moving in tandem").
-    
-    Output a structured "Reality Report" that the Intuition Agent can ingest.
+    2.  **Relational Analysis**: Analyze the semantic compressions of the data. Identify patterns, structures, correlations, divergences, and tensions between assets, sectors etc. (e.g., "Yields rising but Tech ignoring it", "Gold and Bitcoin moving in tandem").
+    3.  **Output a structured "Reality Report" that the Intuition Agent can ingest.
     """,
     tools=[get_market_snapshot]
 )
@@ -25,7 +24,7 @@ reality_analyzer = Agent(
 # Role: Generates hypotheses ("sparks").
 intuition_agent = Agent(
     name="intuition_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite",
     description="Generates intuitive hypotheses and 'sparks' from market reality reports.",
     instruction="""
     You are the Intuition Agent (System 1). You rely on pattern recognition and rapid association.
@@ -46,10 +45,10 @@ intuition_agent = Agent(
 # Role: Validates sparks.
 reasoning_agent = Agent(
     name="reasoning_agent",
-    model="gemini-2.0-flash", # Or Pro if deep reasoning is needed
-    description="Validates market hypotheses using logic and historical context.",
+    model="gemini-2.5-flash", # Or Pro if deep reasoning is needed
+    description="Validate or reject market hypotheses using logic, statistics and historical context.",
     instruction="""
-    You are the Reasoning Agent (System 2). You are the gatekeeper of logic and rigor.
+    You are the Reasoning Agent (System 2). You are the gatekeeper of deep analysis, logic and rigor.
     
     Input: A list of "Sparks" (from Intuition Agent).
     
@@ -57,9 +56,9 @@ reasoning_agent = Agent(
     - Critique each spark.
     - Ask: "Is this causally sound?", "What is the base rate of this happening?", "Is the structural alpha real or ephemeral?"
     - Filter out noise.
-    - Expand on the valid ideas with structural reasoning.
+    - Expand on the valid ideas with structural reasoning, thinking step-by-step.
     
-    Output: A collection of "Validated Theses".
+    Output: A collection of "Validated Theses" along with supporting evidence.
     """
 )
 
@@ -67,7 +66,7 @@ reasoning_agent = Agent(
 # Role: Orchestrator.
 cio_agent = Agent(
     name="cio_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite",
     description="The Chief Investment Officer. Orchestrates the pipeline and synthesizes the final market narrative.",
     instruction="""
     You are the Chief Investment Officer (CIO) of a Semantic Quant fund.
@@ -75,7 +74,7 @@ cio_agent = Agent(
     Your goal is to produce a high-quality "Daily Market Narrative" by orchestrating your team of sub-agents.
     
     Architecture:
-    1.  **Reality Analyzer**: Gets the data and describes it.
+    1.  **Reality Analyzer**: Gets the data, semantically compresses it, and conducts a relational analysis.
     2.  **Intuition Agent**: Generates ideas from that description.
     3.  **Reasoning Agent**: Validates those ideas.
     

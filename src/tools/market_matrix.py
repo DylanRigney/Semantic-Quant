@@ -1,11 +1,17 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional
+import os
+from dotenv import load_dotenv
+from fredapi import Fred
+from typing import Dict, Any, Optional, List
 
-def get_market_snapshot(tickers: Optional[list] = None) -> Dict[str, Any]:
+load_dotenv()
+
+def get_market_snapshot(tickers: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Retrieves a market snapshot including price level, volatility, and calculated Z-scores.
+    Also fetches foundational interest rate data from FRED.
 
     Args:
         tickers (list, optional): List of ticker symbols to fetch. 
@@ -15,13 +21,12 @@ def get_market_snapshot(tickers: Optional[list] = None) -> Dict[str, Any]:
         Dict[str, Any]: A dictionary containing structured market data.
                         Example:
                         {
-                            "SPY": {
-                                "price": 450.0,
-                                "daily_change_pct": 0.5,
-                                "z_score_30d": 1.2,
-                                "volatility_30d": 0.15
-                            },
-                            ...
+                            "SPY": { ... },
+                            "rates": {
+                                "10Y_Treasury": 4.2,
+                                "2Y_Treasury": 4.5,
+                                "Fed_Funds": 5.33
+                            }
                         }
     """
     if tickers is None:
@@ -29,6 +34,7 @@ def get_market_snapshot(tickers: Optional[list] = None) -> Dict[str, Any]:
 
     snapshot = {}
 
+    # --- 1. Fetch Market Data (YFinance) ---
     try:
         # Batch download for efficiency
         data = yf.download(tickers, period="3mo", progress=False)['Close']
@@ -74,6 +80,42 @@ def get_market_snapshot(tickers: Optional[list] = None) -> Dict[str, Any]:
             }
 
     except Exception as e:
-        return {"error": f"Failed to fetch market data: {str(e)}"}
+        snapshot["market_data_error"] = f"Failed to fetch market data: {str(e)}"
+
+    # --- 2. Fetch Macro Rates (FRED) ---
+    try:
+        fred_key = os.getenv("FRED_API_KEY")
+        if fred_key:
+            fred = Fred(api_key=fred_key)
+            
+            # DGS10: 10-Year Treasury Constant Maturity Rate
+            # DGS2: 2-Year Treasury Constant Maturity Rate
+            # FEDFUNDS: Effective Federal Funds Rate
+            rates_series = ["DGS10", "DGS2", "FEDFUNDS"]
+            
+            rates_data = {}
+            for series_id in rates_series:
+                try:
+                    # Get the most recent observation
+                    series = fred.get_series(series_id, limit=5).dropna()
+                    if not series.empty:
+                        # Map readable names
+                        name_map = {
+                            "DGS10": "10Y_Treasury",
+                            "DGS2": "2Y_Treasury",
+                            "FEDFUNDS": "Fed_Funds_Rate"
+                        }
+                        name = name_map.get(series_id, series_id)
+                        rates_data[name] = round(float(series.iloc[-1]), 2)
+                except Exception:
+                    continue # Skip individual series failure
+            
+            if rates_data:
+                snapshot["rates"] = rates_data
+        else:
+             snapshot["rates"] = {"info": "FRED_API_KEY not found in env"}
+
+    except Exception as e:
+        snapshot["rates_error"] = f"Failed to fetch rates: {str(e)}"
 
     return snapshot
